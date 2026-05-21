@@ -1,0 +1,2652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roguelike Card Quest</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #game-container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(15, 15, 30, 0.9);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            text-align: center;
+            color: #f39c12;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Class Selection */
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .class-card {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            padding: 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .class-card:hover {
+            transform: translateY(-5px);
+            border-color: #f39c12;
+            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+        }
+
+        .class-card h3 {
+            color: #f39c12;
+            margin-bottom: 10px;
+        }
+
+        .class-card p {
+            color: #bbb;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Battle Screen */
+        .battle-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .character-info {
+            background: rgba(30, 30, 50, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #3498db;
+        }
+
+        .enemy-info {
+            background: rgba(50, 30, 30, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #e74c3c;
+        }
+
+        .hp-bar-container {
+            background: #34495e;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .hp-bar {
+            background: linear-gradient(90deg, #27ae60 0%, #2ecc71 100%);
+            height: 100%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .enemy-hp-bar {
+            background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        /* Cards */
+        .cards-container {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            border: 2px solid #3498db;
+            border-radius: 12px;
+            padding: 15px;
+            min-width: 180px;
+            max-width: 180px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.6);
+        }
+
+        .card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .card-cost {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .card-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #f39c12;
+            margin-bottom: 10px;
+        }
+
+        .card-description {
+            font-size: 13px;
+            color: #bbb;
+            margin-bottom: 10px;
+        }
+
+        .card-type {
+            font-size: 11px;
+            color: #95a5a6;
+            text-transform: uppercase;
+        }
+
+        /* Buttons */
+        button {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        }
+
+        /* Status Messages */
+        .status-message {
+            background: rgba(52, 152, 219, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .gold-display {
+            color: #f39c12;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        /* Battle Log */
+        .battle-log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .battle-log p {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Ancient Cards */
+        .ancient-card-border {
+            border: 3px solid #ffd700;
+            background: linear-gradient(135deg, #4a3f35 0%, #5d4e37 100%);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .ancient-tag {
+            background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+            color: #1a1a2e;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* Epic Cards */
+        .epic-card-border {
+            border: 3px solid #9b59b6;
+            background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+            box-shadow: 0 0 20px rgba(155, 89, 182, 0.3);
+        }
+
+        .epic-tag {
+            background: linear-gradient(90deg, #9b59b6 0%, #be90d4 100%);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>⚔️ Roguelike Card Quest ⚔️</h1>
+
+        <!-- Hub Screen -->
+        <div id="hub-screen" class="screen active">
+            <h2 style="text-align: center; margin-bottom: 30px;">🏛️ The Sanctuary 🏛️</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0;">
+                <!-- Difficulty Selection -->
+                <div class="class-card" style="cursor: default;">
+                    <h3 style="text-align: center; color: #f39c12;">⚔️ Select Difficulty</h3>
+                    <div id="difficulty-buttons" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                        <!-- Buttons created by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Lorekeeper -->
+                <div class="class-card" id="lorekeeper-card" style="cursor: pointer;">
+                    <h3 style="text-align: center; color: #9b59b6;">📜 Lorekeeper Meridian</h3>
+                    <p style="text-align: center; margin-top: 15px;">
+                        "Greetings, brave soul. I keep the ancient tales of those who came before..."
+                    </p>
+                    <p style="text-align: center; margin-top: 10px; color: #95a5a6; font-size: 12px;">
+                        Click to hear tales of the dungeon
+                    </p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <button id="enter-dungeon-btn" style="font-size: 20px; padding: 15px 40px;">
+                    ⚔️ Enter the Dungeon ⚔️
+                </button>
+            </div>
+        </div>
+
+        <!-- Class Selection Screen -->
+        <div id="class-selection" class="screen">
+            <div id="progression-info" style="text-align: center; margin-bottom: 20px; padding: 15px; background: rgba(52, 152, 219, 0.2); border-radius: 8px;">
+                <p id="runs-completed-display"></p>
+                <p id="difficulty-indicator"></p>
+            </div>
+            <h2 style="text-align: center; margin-bottom: 20px;">Choose Your Class</h2>
+            <div class="class-grid" id="class-grid">
+                <!-- Classes created by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Map Screen -->
+        <div id="map-screen" class="screen">
+            <h2>Choose Your Path</h2>
+            <div class="status-message">
+                <p>Floor: <span id="floor-number">1</span> / 5</p>
+                <p>Rooms Visited: <span id="rooms-visited">0</span> / 10</p>
+                <p class="gold-display">💰 Gold: <span id="gold">50</span></p>
+            </div>
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <button id="battle-btn">⚔️ Battle</button>
+                <button id="shop-btn">🛒 Shop</button>
+                <button id="rest-btn">❤️ Rest Site</button>
+                <button id="ancient-btn" style="background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #1a1a2e;">✨ Ancient Room ✨</button>
+            </div>
+        </div>
+
+        <!-- Battle Screen -->
+        <div id="battle-screen" class="screen">
+            <div class="battle-area">
+                <div class="character-info">
+                    <h3 id="player-name">Hero</h3>
+                    <div class="hp-bar-container">
+                        <div class="hp-bar" id="player-hp-bar">
+                            <span id="player-hp-text">100/100</span>
+                        </div>
+                    </div>
+                    <p>Energy: <span id="player-energy">3</span> / 3</p>
+                    <p>Block: <span id="player-block">0</span></p>
+                    <p id="music-stacks-display" style="display: none; color: #9b59b6; font-weight: bold;">🎵 Music: <span id="music-stacks">0</span></p>
+                </div>
+                <div class="enemy-info">
+                    <h3 id="enemy-name">Enemy</h3>
+                    <div class="hp-bar-container">
+                        <div class="hp-bar enemy-hp-bar" id="enemy-hp-bar">
+                            <span id="enemy-hp-text">50/50</span>
+                        </div>
+                    </div>
+                    <div class="enemy-intent">
+                        <strong>Next Action:</strong> <span id="enemy-intent">Attack for 8 damage</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cards-container" id="hand-container">
+                <!-- Cards created by JavaScript -->
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="end-turn-btn">End Turn</button>
+            </div>
+
+            <div class="battle-log" id="battle-log">
+                <!-- Battle messages appear here -->
+            </div>
+        </div>
+
+        <!-- Shop Screen -->
+        <div id="shop-screen" class="screen">
+            <h2 style="text-align: center;">🛒 Merchant's Shop</h2>
+            <p style="text-align: center;" class="gold-display">💰 Gold: <span id="shop-gold">50</span></p>
+            <div class="cards-container" id="shop-cards">
+                <!-- Shop cards created by JavaScript -->
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="leave-shop-btn">Leave Shop</button>
+            </div>
+        </div>
+
+        <!-- Rest Site Screen -->
+        <div id="rest-site-screen" class="screen">
+            <h2 style="text-align: center; margin-bottom: 20px;">🔥 Rest Site 🔥</h2>
+            <p style="text-align: center; font-size: 18px; margin-bottom: 30px;">
+                Take a moment to rest and recover. Choose one:
+            </p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0;">
+                <div class="class-card" id="heal-option" style="cursor: pointer;">
+                    <h3 style="text-align: center; color: #27ae60; font-size: 24px;">❤️ Heal</h3>
+                    <p style="text-align: center; margin: 15px 0;"><strong>Restore your health</strong></p>
+                    <p style="text-align: center; font-size: 18px; color: #27ae60;">
+                        Recover <span id="heal-amount">25</span> HP
+                    </p>
+                </div>
+                
+                <div class="class-card" id="upgrade-option" style="cursor: pointer;">
+                    <h3 style="text-align: center; color: #3498db; font-size: 24px;">⬆️ Upgrade</h3>
+                    <p style="text-align: center; margin: 15px 0;"><strong>Enhance a card</strong></p>
+                    <p style="text-align: center; font-size: 14px;">
+                        Upgrade any card in your deck to make it more powerful
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ancient Room Screen -->
+        <div id="ancient-room-screen" class="screen">
+            <h2 style="text-align: center; margin-bottom: 20px; color: #ffd700;">✨ Ancient Room ✨</h2>
+            <p style="text-align: center; font-size: 18px; margin-bottom: 30px;">
+                You've discovered a mystical ancient chamber! Powerful rewards await...
+            </p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0;">
+                <div class="class-card ancient-card-border" id="ancient-cards-option" style="cursor: pointer;">
+                    <div class="ancient-tag">ANCIENT CARDS</div>
+                    <h3 style="text-align: center; color: #ffd700; font-size: 24px;">📜 Rare Cards</h3>
+                    <p style="text-align: center; margin: 15px 0;"><strong>Obtain powerful ancient cards</strong></p>
+                    <p style="text-align: center; font-size: 14px;">
+                        Choose from 3 rare and powerful cards
+                    </p>
+                </div>
+                
+                <div class="class-card ancient-card-border" id="multiclass-option" style="cursor: pointer;">
+                    <div class="ancient-tag">MULTICLASS</div>
+                    <h3 style="text-align: center; color: #ffd700; font-size: 24px;">🎭 Learn Another Class</h3>
+                    <p style="text-align: center; margin: 15px 0;"><strong>Gain access to another class's cards</strong></p>
+                    <p style="text-align: center; font-size: 14px;">
+                        Add a second class to your card pool
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ancient Cards Selection Screen -->
+        <div id="ancient-cards-screen" class="screen">
+            <h2 style="text-align: center; margin-bottom: 20px; color: #ffd700;">✨ Choose an Ancient Card ✨</h2>
+            <div class="cards-container" id="ancient-cards-list"></div>
+        </div>
+
+        <!-- Multiclass Selection Screen -->
+        <div id="multiclass-screen" class="screen">
+            <h2 style="text-align: center; margin-bottom: 20px; color: #ffd700;">🎭 Choose Another Class 🎭</h2>
+            <p style="text-align: center; margin-bottom: 30px;">
+                Select a class to add its cards to your available card pool in shops
+            </p>
+            <div class="class-grid" id="multiclass-grid"></div>
+        </div>
+
+        <!-- Card Upgrade Selection Screen -->
+        <div id="card-upgrade-screen" class="screen">
+            <h2 style="text-align: center; margin-bottom: 20px;">⬆️ Choose a Card to Upgrade ⬆️</h2>
+            <p style="text-align: center; margin-bottom: 30px;">
+                Select a card from your deck to permanently upgrade it
+            </p>
+            <div class="cards-container" id="upgrade-card-list"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="cancel-upgrade-btn" class="btn-danger">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Upgrade Preview Screen -->
+        <div id="upgrade-preview-screen" class="screen">
+            <div id="upgrade-preview-container"></div>
+        </div>
+
+        <!-- Victory Screen -->
+        <div id="victory-screen" class="screen">
+            <div style="text-align: center;">
+                <h2 style="color: #27ae60; font-size: 48px; margin-bottom: 20px;">🎉 Victory! 🎉</h2>
+                <div class="status-message" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);">
+                    <h3 style="color: white;">You have defeated <span id="defeated-boss-name">The Overseer</span>!</h3>
+                    <p style="margin-top: 10px; color: #ecf0f1;" id="victory-message">The dungeon trembles as the boss falls...</p>
+                </div>
+                <div style="text-align: center;">
+                    <button id="return-to-hub-btn">Return to Sanctuary</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Defeat Screen -->
+        <div id="defeat-screen" class="screen">
+            <div style="text-align: center;">
+                <h2 style="color: #e74c3c; font-size: 48px; margin-bottom: 20px;">💀 Defeated 💀</h2>
+                <div class="status-message" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                    <h3 style="color: white;">You have fallen in the dungeon...</h3>
+                    <p style="margin-top: 10px; color: #ecf0f1;">Try again, brave adventurer!</p>
+                </div>
+                <div style="text-align: center;">
+                    <button id="restart-btn">Play Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== GAME STATE ====================
+        window.gameState = {
+            player: {
+                name: '',
+                class: '',
+                secondaryClass: null,
+                additionalClasses: [],
+                maxHp: 100,
+                hp: 100,
+                maxEnergy: 3,
+                energy: 3,
+                block: 0,
+                musicStacks: 0,
+                deck: [],
+                hand: [],
+                discard: [],
+                cardInstances: {},
+                nextInstanceId: 0
+            },
+            enemy: {
+                name: '',
+                maxHp: 50,
+                hp: 50,
+                nextAction: null
+            },
+            gold: 50,
+            floor: 1,
+            maxFloor: 5,
+            hasChosenMidGameUpgrade: false,
+            roomsVisitedThisFloor: 0,
+            restSitesUsedThisFloor: 0,
+            maxRestSitesPerFloor: 0,
+            restSiteRooms: [],
+            roomTypes: [],
+            ancientRoomsFound: 0,
+            ancientRoomChance: 0.03
+        };
+
+        const gameState = window.gameState;
+
+        // ==================== PROGRESSION ====================
+        let progression = {
+            hasDefeatedOverseer: false,
+            hasDefeatedFallenOverseer: false,
+            hasDefeatedAncientOverseer: false,
+            hasDefeatedWatcher: false,
+            runsCompleted: 0,
+            selectedDifficulty: 'EASY',
+            unlockedCards: []
+        };
+
+        // ==================== DIFFICULTY SETTINGS ====================
+        const difficultySettings = {
+            EASY: { hpMult: 1.0, atkMult: 1.0, unlocked: true },
+            HARD: { hpMult: 1.3, atkMult: 1.4, unlocked: false },
+            INSANE: { hpMult: 1.7, atkMult: 2.0, unlocked: false },
+            IMPOSSIBLE: { hpMult: 2.2, atkMult: 2.5, unlocked: false }
+        };
+
+        // ==================== CARD DATABASE ====================
+        const cardDatabase = {
+            // Basic Cards
+            strike: {
+                name: 'Strike',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 6 damage',
+                effect: (enemy) => {
+                    const damage = 6;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            block: {
+                name: 'Block',
+                cost: 1,
+                type: 'Defense',
+                description: 'Gain 5 block',
+                effect: () => {
+                    gameState.player.block += 5;
+                    addToBattleLog('Gained 5 block');
+                }
+            },
+            
+            // Warrior Cards
+            powerStrike: {
+                name: 'Power Strike',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 14 damage',
+                effect: (enemy) => {
+                    const damage = 14;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            heavyStrike: {
+                name: 'Heavy Strike',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 9 damage',
+                effect: (enemy) => {
+                    const damage = 9;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            shieldWall: {
+                name: 'Shield Wall',
+                cost: 2,
+                type: 'Defense',
+                description: 'Gain 8 block',
+                effect: () => {
+                    gameState.player.block += 8;
+                    addToBattleLog('Gained 8 block');
+                }
+            },
+            
+            // Mage Cards
+            fireball: {
+                name: 'Fireball',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 10 damage',
+                effect: (enemy) => {
+                    const damage = 10;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            inferno: {
+                name: 'Inferno',
+                cost: 3,
+                type: 'Attack',
+                description: 'Deal 18 damage',
+                effect: (enemy) => {
+                    const damage = 18;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage with Inferno`);
+                }
+            },
+            
+            // Rogue Cards
+            backstab: {
+                name: 'Backstab',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 8 damage',
+                effect: (enemy) => {
+                    const damage = 8;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            quickSlash: {
+                name: 'Quick Slash',
+                cost: 0,
+                type: 'Attack',
+                description: 'Deal 4 damage',
+                effect: (enemy) => {
+                    const damage = 4;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            
+            // Paladin Cards
+            divineStrike: {
+                name: 'Divine Strike',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 10 damage',
+                effect: (enemy) => {
+                    const damage = 10;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} holy damage`);
+                }
+            },
+            holyLight: {
+                name: 'Holy Light',
+                cost: 2,
+                type: 'Skill',
+                description: 'Heal 8 HP',
+                effect: () => {
+                    const heal = 8;
+                    gameState.player.hp = Math.min(gameState.player.hp + heal, gameState.player.maxHp);
+                    addToBattleLog(`Healed ${heal} HP`);
+                }
+            },
+            blessing: {
+                name: 'Blessing',
+                cost: 1,
+                type: 'Defense',
+                description: 'Gain 5 block',
+                effect: () => {
+                    gameState.player.block += 5;
+                    addToBattleLog('Gained 5 block');
+                }
+            },
+            
+            // Necromancer Cards
+            lifeDrain: {
+                name: 'Life Drain',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 5 damage, heal 3 HP',
+                effect: (enemy) => {
+                    const damage = 5;
+                    const heal = 3;
+                    enemy.hp -= damage;
+                    gameState.player.hp = Math.min(gameState.player.hp + heal, gameState.player.maxHp);
+                    addToBattleLog(`Dealt ${damage} damage and healed ${heal} HP`);
+                }
+            },
+            soulSiphon: {
+                name: 'Soul Siphon',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 8 damage, heal 5 HP',
+                effect: (enemy) => {
+                    const damage = 8;
+                    const heal = 5;
+                    enemy.hp -= damage;
+                    gameState.player.hp = Math.min(gameState.player.hp + heal, gameState.player.maxHp);
+                    addToBattleLog(`Dealt ${damage} damage and healed ${heal} HP`);
+                }
+            },
+            darkBolt: {
+                name: 'Dark Bolt',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 7 damage',
+                effect: (enemy) => {
+                    const damage = 7;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} dark damage`);
+                }
+            },
+            
+            // Ranger Cards
+            piercingArrow: {
+                name: 'Piercing Arrow',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 7 damage',
+                effect: (enemy) => {
+                    const damage = 7;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} piercing damage`);
+                }
+            },
+            multiShot: {
+                name: 'Multi Shot',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 4 damage three times',
+                effect: (enemy) => {
+                    const damage = 4;
+                    enemy.hp -= damage * 3;
+                    addToBattleLog(`Dealt ${damage * 3} damage (4x3)`);
+                }
+            },
+            arrowShot: {
+                name: 'Arrow Shot',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 6 damage',
+                effect: (enemy) => {
+                    const damage = 6;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            
+            // Monk Cards
+            ironFist: {
+                name: 'Iron Fist',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 7 damage',
+                effect: (enemy) => {
+                    const damage = 7;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            palmStrike: {
+                name: 'Palm Strike',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 6 damage',
+                effect: (enemy) => {
+                    const damage = 6;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            flyingKick: {
+                name: 'Flying Kick',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 12 damage',
+                effect: (enemy) => {
+                    const damage = 12;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            
+            // Bard Cards
+            sonicBoom: {
+                name: 'Sonic Boom',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 7 damage. Gain 1 Music stack.',
+                effect: (enemy) => {
+                    const damage = 7;
+                    enemy.hp -= damage;
+                    gameState.player.musicStacks++;
+                    addToBattleLog(`Dealt ${damage} sonic damage and gained 1 Music stack`);
+                }
+            },
+            healingSong: {
+                name: 'Healing Song',
+                cost: 1,
+                type: 'Skill',
+                description: 'Heal 6 HP. Gain 1 Music stack.',
+                effect: () => {
+                    const heal = 6;
+                    gameState.player.hp = Math.min(gameState.player.hp + heal, gameState.player.maxHp);
+                    gameState.player.musicStacks++;
+                    addToBattleLog(`Healed ${heal} HP and gained 1 Music stack`);
+                }
+            },
+            crescendo: {
+                name: 'Crescendo',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 15 damage + 5 per Music stack. Consume all Music stacks.',
+                effect: (enemy) => {
+                    const baseDamage = 15;
+                    const bonusDamage = gameState.player.musicStacks * 5;
+                    const totalDamage = baseDamage + bonusDamage;
+                    enemy.hp -= totalDamage;
+                    addToBattleLog(`Dealt ${totalDamage} damage with Crescendo (${baseDamage} + ${bonusDamage} from ${gameState.player.musicStacks} Music stacks)`);
+                    gameState.player.musicStacks = 0;
+                }
+            },
+            
+            // Berserker Cards
+            rage: {
+                name: 'Rage',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 10 damage',
+                effect: (enemy) => {
+                    const damage = 10;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage in rage`);
+                }
+            },
+            savageStrike: {
+                name: 'Savage Strike',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 16 damage',
+                effect: (enemy) => {
+                    const damage = 16;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} savage damage`);
+                }
+            },
+            recklessAssault: {
+                name: 'Reckless Assault',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 8 damage',
+                effect: (enemy) => {
+                    const damage = 8;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            
+            // Alchemist Cards
+            toxicVial: {
+                name: 'Toxic Vial',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 7 damage',
+                effect: (enemy) => {
+                    const damage = 7;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} poison damage`);
+                }
+            },
+            healingPotion: {
+                name: 'Healing Potion',
+                cost: 1,
+                type: 'Skill',
+                description: 'Heal 8 HP',
+                effect: () => {
+                    const heal = 8;
+                    gameState.player.hp = Math.min(gameState.player.hp + heal, gameState.player.maxHp);
+                    addToBattleLog(`Healed ${heal} HP`);
+                }
+            },
+            volatileMixture: {
+                name: 'Volatile Mixture',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 13 damage',
+                effect: (enemy) => {
+                    const damage = 13;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} explosive damage`);
+                }
+            },
+            
+            // Druid Cards
+            thornWhip: {
+                name: 'Thorn Whip',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 7 damage',
+                effect: (enemy) => {
+                    const damage = 7;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} nature damage`);
+                }
+            },
+            natureMend: {
+                name: 'Nature Mend',
+                cost: 2,
+                type: 'Skill',
+                description: 'Heal 10 HP',
+                effect: () => {
+                    const heal = 10;
+                    gameState.player.hp = Math.min(gameState.player.hp + heal, gameState.player.maxHp);
+                    addToBattleLog(`Healed ${heal} HP`);
+                }
+            },
+            rootGrasp: {
+                name: 'Root Grasp',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 11 damage',
+                effect: (enemy) => {
+                    const damage = 11;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage`);
+                }
+            },
+            
+            // Assassin Cards
+            shadowStrike: {
+                name: 'Shadow Strike',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 8 damage',
+                effect: (enemy) => {
+                    const damage = 8;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} damage from shadows`);
+                }
+            },
+            criticalHit: {
+                name: 'Critical Hit',
+                cost: 2,
+                type: 'Attack',
+                description: 'Deal 15 damage',
+                effect: (enemy) => {
+                    const damage = 15;
+                    enemy.hp -= damage;
+                    addToBattleLog(`CRITICAL! Dealt ${damage} damage`);
+                }
+            },
+            poisonBlade: {
+                name: 'Poison Blade',
+                cost: 1,
+                type: 'Attack',
+                description: 'Deal 6 damage',
+                effect: (enemy) => {
+                    const damage = 6;
+                    enemy.hp -= damage;
+                    addToBattleLog(`Dealt ${damage} poison damage`);
+                }
+            },
+            
+            // Utility Cards
+            fortify: {
+                name: 'Fortify',
+                cost: 1,
+                type: 'Defense',
+                description: 'Gain 6 block',
+                effect: () => {
+                    gameState.player.block += 6;
+                    addToBattleLog('Gained 6 block');
+                }
+            },
+            heal: {
+                name: 'Heal',
+                cost: 1,
+                type: 'Skill',
+                description: 'Heal 10 HP',
+                effect: () => {
+                    const heal = 10;
+                    gameState.player.hp = Math.min(gameState.player.hp + heal, gameState.player.maxHp);
+                    addToBattleLog(`Healed ${heal} HP`);
+                }
+            }
+        };
+
+        console.log('Game state and card database loaded');
+
+        // ==================== STARTING DECKS ====================
+        const startingDecks = {
+            warrior: ['strike', 'strike', 'strike', 'strike', 'block', 'block', 'block', 'block', 'powerStrike', 'heavyStrike'],
+            mage: ['strike', 'strike', 'strike', 'block', 'block', 'fireball', 'fireball', 'fireball', 'inferno'],
+            rogue: ['strike', 'strike', 'backstab', 'backstab', 'backstab', 'quickSlash', 'quickSlash', 'quickSlash', 'block', 'block'],
+            paladin: ['strike', 'strike', 'block', 'block', 'block', 'block', 'shieldWall', 'shieldWall', 'divineStrike', 'blessing'],
+            necromancer: ['strike', 'strike', 'lifeDrain', 'lifeDrain', 'lifeDrain', 'lifeDrain', 'soulSiphon', 'darkBolt', 'darkBolt', 'block'],
+            ranger: ['strike', 'strike', 'piercingArrow', 'piercingArrow', 'piercingArrow', 'arrowShot', 'arrowShot', 'multiShot', 'block', 'block'],
+            monk: ['strike', 'strike', 'ironFist', 'ironFist', 'ironFist', 'palmStrike', 'palmStrike', 'palmStrike', 'flyingKick', 'block'],
+            bard: ['strike', 'strike', 'strike', 'sonicBoom', 'sonicBoom', 'sonicBoom', 'healingSong', 'healingSong', 'crescendo', 'block'],
+            berserker: ['strike', 'strike', 'rage', 'rage', 'rage', 'rage', 'savageStrike', 'savageStrike', 'recklessAssault', 'recklessAssault'],
+            alchemist: ['strike', 'strike', 'toxicVial', 'toxicVial', 'toxicVial', 'healingPotion', 'healingPotion', 'volatileMixture', 'block', 'block'],
+            druid: ['strike', 'strike', 'thornWhip', 'thornWhip', 'thornWhip', 'natureMend', 'natureMend', 'rootGrasp', 'block', 'block'],
+            assassin: ['strike', 'strike', 'shadowStrike', 'shadowStrike', 'shadowStrike', 'criticalHit', 'poisonBlade', 'poisonBlade', 'poisonBlade', 'block']
+        };
+
+        // ==================== CLASS INFO ====================
+        const classInfo = {
+            warrior: {
+                name: '⚔️ Warrior',
+                hp: 100,
+                description: 'Balanced offense and defense with high health',
+                starting: 'Strike cards and defensive blocks',
+                playstyle: 'Balanced offense and defense with high health'
+            },
+            mage: {
+                name: '🔮 Mage',
+                hp: 65,
+                description: 'High damage but fragile',
+                starting: 'Powerful spell cards',
+                playstyle: 'High damage but fragile'
+            },
+            rogue: {
+                name: '🗡️ Rogue',
+                hp: 80,
+                description: 'Fast-paced with lots of card draw',
+                starting: 'Quick strikes and card draw',
+                playstyle: 'Fast-paced with lots of card draw'
+            },
+            paladin: {
+                name: '✨ Paladin',
+                hp: 120,
+                description: 'Ultimate defense. Unlock healing through shops!',
+                starting: 'Pure tank with heavy blocks',
+                playstyle: 'Ultimate defense. Unlock healing through shops!'
+            },
+            necromancer: {
+                name: '💀 Necromancer',
+                hp: 65,
+                description: 'Heal by stealing life from enemies',
+                starting: 'Life drain and vampiric attacks',
+                playstyle: 'Heal by stealing life from enemies'
+            },
+            ranger: {
+                name: '🏹 Ranger',
+                hp: 85,
+                description: 'Consistent damage with piercing shots',
+                starting: 'Multi-target attacks',
+                playstyle: 'Consistent damage with piercing shots'
+            },
+            monk: {
+                name: '🥋 Monk',
+                hp: 90,
+                description: 'Chain many small attacks together',
+                starting: 'Low-cost combos',
+                playstyle: 'Chain many small attacks together'
+            },
+            bard: {
+                name: '🎵 Bard',
+                hp: 75,
+                description: 'Build Music stacks, then unleash devastating music damage!',
+                starting: 'Music cards that build stacks',
+                playstyle: 'Build Music stacks, then unleash devastating music damage!'
+            },
+            berserker: {
+                name: '🪓 Berserker',
+                hp: 110,
+                description: 'All-out offense! ⚠️ Cannot heal from cards (except special Berserker healing cards in shops)',
+                starting: 'Pure damage attacks',
+                playstyle: 'All-out offense! ⚠️ Cannot heal from cards'
+            },
+            alchemist: {
+                name: '⚗️ Alchemist',
+                hp: 70,
+                description: 'Versatile with healing, damage, and utility',
+                starting: 'Potions and mixtures',
+                playstyle: 'Versatile with healing, damage, and utility'
+            },
+            druid: {
+                name: '🌿 Druid',
+                hp: 95,
+                description: 'Balanced with strong healing and damage over time',
+                starting: 'Nature magic',
+                playstyle: 'Balanced with strong healing and damage over time'
+            },
+            assassin: {
+                name: '🔪 Assassin',
+                hp: 75,
+                description: 'Burst damage with stealth and precision strikes',
+                starting: 'Critical strikes',
+                playstyle: 'Burst damage with stealth and precision strikes'
+            }
+        };
+
+        // ==================== HELPER FUNCTIONS ====================
+        function addToBattleLog(message) {
+            const log = document.getElementById('battle-log');
+            const p = document.createElement('p');
+            p.textContent = message;
+            log.insertBefore(p, log.firstChild);
+            
+            // Keep only last 10 messages
+            while (log.children.length > 10) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function updatePlayerHP() {
+            const hpBar = document.getElementById('player-hp-bar');
+            const hpText = document.getElementById('player-hp-text');
+            const percent = (gameState.player.hp / gameState.player.maxHp) * 100;
+            hpBar.style.width = percent + '%';
+            hpText.textContent = `${gameState.player.hp}/${gameState.player.maxHp}`;
+        }
+
+        function updateEnemyHP() {
+            const hpBar = document.getElementById('enemy-hp-bar');
+            const hpText = document.getElementById('enemy-hp-text');
+            const percent = (gameState.enemy.hp / gameState.enemy.maxHp) * 100;
+            hpBar.style.width = percent + '%';
+            hpText.textContent = `${gameState.enemy.hp}/${gameState.enemy.maxHp}`;
+        }
+
+        function updateGoldDisplay() {
+            document.getElementById('gold').textContent = gameState.gold;
+            const shopGold = document.getElementById('shop-gold');
+            if (shopGold) {
+                shopGold.textContent = gameState.gold;
+            }
+        }
+
+        function updateMapScreen() {
+            document.getElementById('floor-number').textContent = gameState.floor;
+            document.getElementById('rooms-visited').textContent = gameState.roomsVisitedThisFloor;
+            updateGoldDisplay();
+            
+            // Show current room type
+            const currentRoom = getCurrentRoomType();
+            let roomText = '';
+            if (currentRoom === 'battle') {
+                roomText = '⚔️ Battle Room Ahead';
+            } else if (currentRoom === 'shop') {
+                roomText = '🛒 Shop Available';
+            } else if (currentRoom === 'rest') {
+                roomText = '🔥 Rest Site Available';
+            } else if (currentRoom === 'boss') {
+                roomText = '💀 BOSS BATTLE AHEAD 💀';
+            } else if (currentRoom === 'ancient') {
+                roomText = '✨ ANCIENT ROOM DISCOVERED ✨';
+            }
+            
+            const statusDiv = document.querySelector('#map-screen .status-message');
+            const existingRoomP = statusDiv.querySelector('.current-room-type');
+            if (existingRoomP) {
+                existingRoomP.textContent = roomText;
+                if (currentRoom === 'ancient') {
+                    existingRoomP.style.color = '#ffd700';
+                } else {
+                    existingRoomP.style.color = '#f39c12';
+                }
+            } else {
+                const p = document.createElement('p');
+                p.className = 'current-room-type';
+                p.style.color = currentRoom === 'ancient' ? '#ffd700' : '#f39c12';
+                p.style.fontSize = '18px';
+                p.style.fontWeight = 'bold';
+                p.style.marginTop = '10px';
+                p.textContent = roomText;
+                statusDiv.appendChild(p);
+            }
+        }
+
+        function getCardWithUpgrade(instanceId) {
+            const instance = gameState.player.cardInstances[instanceId];
+            const baseCard = cardDatabase[instance.baseId];
+            const upgradeLevel = instance.upgradeLevel;
+            
+            // Clone the base card
+            const card = { ...baseCard };
+            
+            // Apply upgrades (+3 damage or +3 block per level)
+            if (upgradeLevel > 0) {
+                const baseDamage = parseInt(card.description.match(/\d+/));
+                if (card.type === 'Attack' && baseDamage) {
+                    const newDamage = baseDamage + (upgradeLevel * 3);
+                    card.description = card.description.replace(/\d+/, newDamage);
+                    card.name = card.name + ' +' + upgradeLevel;
+                } else if (card.type === 'Defense') {
+                    const baseBlock = parseInt(card.description.match(/\d+/));
+                    if (baseBlock) {
+                        const newBlock = baseBlock + (upgradeLevel * 3);
+                        card.description = card.description.replace(/\d+/, newBlock);
+                        card.name = card.name + ' +' + upgradeLevel;
+                    }
+                } else if (card.type === 'Skill' && card.description.includes('Heal')) {
+                    const baseHeal = parseInt(card.description.match(/\d+/));
+                    if (baseHeal) {
+                        const newHeal = baseHeal + (upgradeLevel * 3);
+                        card.description = card.description.replace(/\d+/, newHeal);
+                        card.name = card.name + ' +' + upgradeLevel;
+                    }
+                }
+            }
+            
+            return card;
+        }
+
+        console.log('Starting decks and class info loaded');
+
+        // ==================== BATTLE SYSTEM ====================
+        function startBattle(enemyName, enemyHp, enemyAttack) {
+            gameState.enemy.name = enemyName;
+            gameState.enemy.maxHp = enemyHp;
+            gameState.enemy.hp = enemyHp;
+            gameState.enemy.nextAction = { type: 'attack', value: enemyAttack };
+            
+            gameState.player.energy = gameState.player.maxEnergy;
+            gameState.player.block = 0;
+            gameState.player.musicStacks = 0; // Reset Music stacks
+            gameState.player.hand = [];
+            gameState.player.discard = [];
+            
+            // Reset draw pile
+            gameState.player.deck = [...Object.keys(gameState.player.cardInstances)];
+            shuffleDeck();
+            
+            document.getElementById('enemy-name').textContent = enemyName;
+            document.getElementById('player-name').textContent = gameState.player.name;
+            
+            updatePlayerHP();
+            updateEnemyHP();
+            updateEnemyIntent();
+            
+            drawCards(5);
+            updateBattleUI();
+            
+            showScreen('battle-screen');
+            addToBattleLog('Battle started!');
+        }
+
+        function shuffleDeck() {
+            for (let i = gameState.player.deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [gameState.player.deck[i], gameState.player.deck[j]] = [gameState.player.deck[j], gameState.player.deck[i]];
+            }
+        }
+
+        function drawCards(count) {
+            for (let i = 0; i < count; i++) {
+                if (gameState.player.deck.length === 0) {
+                    if (gameState.player.discard.length === 0) break;
+                    gameState.player.deck = [...gameState.player.discard];
+                    gameState.player.discard = [];
+                    shuffleDeck();
+                }
+                
+                const card = gameState.player.deck.pop();
+                gameState.player.hand.push(card);
+            }
+            renderHand();
+        }
+
+        function renderHand() {
+            const container = document.getElementById('hand-container');
+            container.innerHTML = '';
+            
+            gameState.player.hand.forEach((instanceId, index) => {
+                const card = getCardWithUpgrade(instanceId);
+                const cardEl = createCardElement(card, instanceId, index);
+                container.appendChild(cardEl);
+            });
+        }
+
+        function createCardElement(card, instanceId, handIndex) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            
+            const canPlay = gameState.player.energy >= card.cost;
+            if (!canPlay) {
+                div.classList.add('disabled');
+            }
+            
+            div.innerHTML = `
+                <div class="card-cost">${card.cost}</div>
+                <div class="card-name">${card.name}</div>
+                <div class="card-description">${card.description}</div>
+                <div class="card-type">${card.type}</div>
+            `;
+            
+            if (canPlay) {
+                div.onclick = () => playCard(instanceId, handIndex);
+            }
+            
+            return div;
+        }
+
+        function playCard(instanceId, handIndex) {
+            const instance = gameState.player.cardInstances[instanceId];
+            const baseCard = cardDatabase[instance.baseId];
+            
+            if (gameState.player.energy < baseCard.cost) {
+                addToBattleLog('Not enough energy!');
+                return;
+            }
+            
+            gameState.player.energy -= baseCard.cost;
+            gameState.player.hand.splice(handIndex, 1);
+            gameState.player.discard.push(instanceId);
+            
+            // Apply upgraded card effect
+            applyUpgradedCardEffect(instanceId, gameState.enemy);
+            
+            updateBattleUI();
+            renderHand();
+            
+            // Check if enemy is dead
+            if (gameState.enemy.hp <= 0) {
+                setTimeout(() => {
+                    endBattle(true);
+                }, 500);
+            }
+        }
+
+        function applyUpgradedCardEffect(instanceId, enemy) {
+            const instance = gameState.player.cardInstances[instanceId];
+            const baseCard = cardDatabase[instance.baseId];
+            const upgradeLevel = instance.upgradeLevel;
+            
+            // Special handling for Bard cards with Music stacks
+            if (instance.baseId === 'sonicBoom') {
+                const baseDamage = 7;
+                const upgradedDamage = baseDamage + (upgradeLevel * 3);
+                enemy.hp -= upgradedDamage;
+                gameState.player.musicStacks++;
+                addToBattleLog(`Dealt ${upgradedDamage} sonic damage and gained 1 Music stack`);
+                return;
+            }
+            
+            if (instance.baseId === 'healingSong') {
+                const baseHeal = 6;
+                const upgradedHeal = baseHeal + (upgradeLevel * 3);
+                gameState.player.hp = Math.min(gameState.player.hp + upgradedHeal, gameState.player.maxHp);
+                gameState.player.musicStacks++;
+                addToBattleLog(`Healed ${upgradedHeal} HP and gained 1 Music stack`);
+                return;
+            }
+            
+            if (instance.baseId === 'crescendo') {
+                const baseDamage = 15;
+                const upgradedBaseDamage = baseDamage + (upgradeLevel * 3);
+                const bonusDamage = gameState.player.musicStacks * 5;
+                const totalDamage = upgradedBaseDamage + bonusDamage;
+                enemy.hp -= totalDamage;
+                addToBattleLog(`Dealt ${totalDamage} damage with Crescendo (${upgradedBaseDamage} + ${bonusDamage} from ${gameState.player.musicStacks} Music stacks)`);
+                gameState.player.musicStacks = 0;
+                return;
+            }
+            
+            // Calculate upgraded values for other cards
+            if (baseCard.type === 'Attack') {
+                const baseDamageMatch = baseCard.description.match(/(\d+)/);
+                if (baseDamageMatch) {
+                    const baseDamage = parseInt(baseDamageMatch[1]);
+                    const upgradedDamage = baseDamage + (upgradeLevel * 3);
+                    
+                    // Special handling for multi-hit attacks
+                    if (baseCard.description.includes('three times')) {
+                        enemy.hp -= upgradedDamage * 3;
+                        addToBattleLog(`Dealt ${upgradedDamage * 3} damage (${upgradedDamage}x3)`);
+                    } else {
+                        enemy.hp -= upgradedDamage;
+                        addToBattleLog(`Dealt ${upgradedDamage} damage`);
+                    }
+                    
+                    // Life drain cards also heal
+                    if (baseCard.description.includes('heal')) {
+                        const healMatch = baseCard.description.match(/heal (\d+)/);
+                        if (healMatch) {
+                            const baseHeal = parseInt(healMatch[1]);
+                            const upgradedHeal = baseHeal + (upgradeLevel * 3);
+                            gameState.player.hp = Math.min(gameState.player.hp + upgradedHeal, gameState.player.maxHp);
+                            addToBattleLog(`Healed ${upgradedHeal} HP`);
+                        }
+                    }
+                }
+            } else if (baseCard.type === 'Defense') {
+                const baseBlockMatch = baseCard.description.match(/(\d+)/);
+                if (baseBlockMatch) {
+                    const baseBlock = parseInt(baseBlockMatch[1]);
+                    const upgradedBlock = baseBlock + (upgradeLevel * 3);
+                    gameState.player.block += upgradedBlock;
+                    addToBattleLog(`Gained ${upgradedBlock} block`);
+                }
+            } else if (baseCard.type === 'Skill') {
+                const baseHealMatch = baseCard.description.match(/(\d+)/);
+                if (baseHealMatch) {
+                    const baseHeal = parseInt(baseHealMatch[1]);
+                    const upgradedHeal = baseHeal + (upgradeLevel * 3);
+                    gameState.player.hp = Math.min(gameState.player.hp + upgradedHeal, gameState.player.maxHp);
+                    addToBattleLog(`Healed ${upgradedHeal} HP`);
+                }
+            }
+        }
+
+        function updateBattleUI() {
+            document.getElementById('player-energy').textContent = gameState.player.energy;
+            document.getElementById('player-block').textContent = gameState.player.block;
+            
+            // Show Music stacks only for Bard class
+            const musicDisplay = document.getElementById('music-stacks-display');
+            if (gameState.player.class === 'bard') {
+                musicDisplay.style.display = 'block';
+                document.getElementById('music-stacks').textContent = gameState.player.musicStacks;
+            } else {
+                musicDisplay.style.display = 'none';
+            }
+            
+            updatePlayerHP();
+            updateEnemyHP();
+        }
+
+        function updateEnemyIntent() {
+            const intentEl = document.getElementById('enemy-intent');
+            if (gameState.enemy.nextAction.type === 'attack') {
+                intentEl.textContent = `Attack for ${gameState.enemy.nextAction.value} damage`;
+            }
+        }
+
+        function endTurn() {
+            // Discard hand
+            gameState.player.discard.push(...gameState.player.hand);
+            gameState.player.hand = [];
+            
+            // Enemy turn
+            enemyTurn();
+            
+            // Check if player is dead
+            if (gameState.player.hp <= 0) {
+                setTimeout(() => {
+                    showScreen('defeat-screen');
+                }, 500);
+                return;
+            }
+            
+            // Start new turn
+            gameState.player.energy = gameState.player.maxEnergy;
+            gameState.player.block = 0;
+            drawCards(5);
+            updateBattleUI();
+        }
+
+        function enemyTurn() {
+            if (gameState.enemy.nextAction.type === 'attack') {
+                let damage = gameState.enemy.nextAction.value;
+                
+                // Apply difficulty multiplier
+                const difficulty = progression.selectedDifficulty;
+                damage = Math.floor(damage * difficultySettings[difficulty].atkMult);
+                
+                // Subtract block
+                if (gameState.player.block > 0) {
+                    if (gameState.player.block >= damage) {
+                        gameState.player.block -= damage;
+                        addToBattleLog(`Blocked ${damage} damage`);
+                        damage = 0;
+                    } else {
+                        damage -= gameState.player.block;
+                        addToBattleLog(`Blocked ${gameState.player.block} damage`);
+                        gameState.player.block = 0;
+                    }
+                }
+                
+                // Apply remaining damage
+                if (damage > 0) {
+                    gameState.player.hp -= damage;
+                    addToBattleLog(`Enemy dealt ${damage} damage`);
+                }
+            }
+            
+            updateBattleUI();
+        }
+
+        function endBattle(victory) {
+            if (victory) {
+                const goldReward = 25 + Math.floor(Math.random() * 26); // 25-50 gold
+                gameState.gold += goldReward;
+                addToBattleLog(`Victory! Gained ${goldReward} gold`);
+                
+                gameState.roomsVisitedThisFloor++;
+                
+                // Check if boss fight
+                if (gameState.roomsVisitedThisFloor >= 10) {
+                    // Boss defeated
+                    checkBossDefeat();
+                } else {
+                    setTimeout(() => {
+                        updateMapScreen();
+                        updateMapButtons();
+                        showScreen('map-screen');
+                    }, 1500);
+                }
+            }
+        }
+
+        function checkBossDefeat() {
+            const bossName = gameState.enemy.name;
+            
+            // Check if this is a final boss (Floor 5)
+            const finalBossNames = ['The Overseer', 'The Fallen Overseer', 'The Ancient Overseer', 'The Watcher'];
+            const isFinalBoss = finalBossNames.includes(bossName);
+            
+            if (isFinalBoss) {
+                // Final boss unlocks
+                if (bossName === 'The Overseer') {
+                    progression.hasDefeatedOverseer = true;
+                    difficultySettings.HARD.unlocked = true;
+                } else if (bossName === 'The Fallen Overseer') {
+                    progression.hasDefeatedFallenOverseer = true;
+                    difficultySettings.INSANE.unlocked = true;
+                } else if (bossName === 'The Ancient Overseer') {
+                    progression.hasDefeatedAncientOverseer = true;
+                    difficultySettings.IMPOSSIBLE.unlocked = true;
+                } else if (bossName === 'The Watcher') {
+                    progression.hasDefeatedWatcher = true;
+                }
+                
+                progression.runsCompleted++;
+                saveProgression();
+                
+                document.getElementById('defeated-boss-name').textContent = bossName;
+                document.getElementById('victory-message').textContent = 
+                    'You have conquered the dungeon! Rest now, hero.';
+                
+                showScreen('victory-screen');
+            } else {
+                // Mini-boss defeated - advance to next floor
+                
+                // Floor 3 mini-boss offers multiclass
+                if (gameState.floor === 3 && !gameState.hasChosenMidGameUpgrade) {
+                    setTimeout(() => {
+                        showFloor3MulticlassOffer();
+                    }, 1000);
+                    return;
+                }
+                
+                // Other floors just advance
+                gameState.floor++;
+                gameState.roomsVisitedThisFloor = 0;
+                
+                // Check if reached floor 5
+                if (gameState.floor >= 5) {
+                    gameState.floor = 5;
+                }
+                
+                generateFloor();
+                
+                setTimeout(() => {
+                    alert(`Floor ${gameState.floor - 1} Complete!\n\nAdvancing to Floor ${gameState.floor}...`);
+                    updateMapScreen();
+                    updateMapButtons();
+                    showScreen('map-screen');
+                }, 1500);
+            }
+        }
+
+        function showFloor3MulticlassOffer() {
+            const container = document.createElement('div');
+            container.id = 'floor3-multiclass-offer';
+            container.className = 'screen active';
+            container.innerHTML = `
+                <h2 style="text-align: center; margin-bottom: 20px; color: #ffd700;">🎭 Multiclass Opportunity 🎭</h2>
+                <p style="text-align: center; font-size: 18px; margin-bottom: 30px;">
+                    You have proven yourself worthy! Choose a second class to master:
+                </p>
+                <div class="class-grid" id="floor3-multiclass-grid"></div>
+            `;
+            
+            document.getElementById('game-container').appendChild(container);
+            
+            const grid = document.getElementById('floor3-multiclass-grid');
+            let availableClasses = 0;
+            
+            Object.keys(classInfo).forEach(classId => {
+                // Skip current class and already learned classes
+                if (classId === gameState.player.class) return;
+                if (gameState.player.additionalClasses.includes(classId)) return;
+                
+                availableClasses++;
+                
+                const info = classInfo[classId];
+                const card = document.createElement('div');
+                card.className = 'class-card ancient-card-border';
+                
+                card.innerHTML = `
+                    <div class="ancient-tag">MULTICLASS</div>
+                    <h3>${info.name}</h3>
+                    <p><strong>HP:</strong> ${info.hp}</p>
+                    <p><strong>Cards:</strong> ${info.starting}</p>
+                    <p style="margin-top: 10px; color: #ffd700;"><strong>Adds this class's cards to shop pool!</strong></p>
+                `;
+                
+                card.onclick = () => selectFloor3Multiclass(classId);
+                grid.appendChild(card);
+            });
+            
+            // If no classes available, skip to next floor
+            if (availableClasses === 0) {
+                gameState.hasChosenMidGameUpgrade = true;
+                container.remove();
+                
+                gameState.floor = 4;
+                gameState.roomsVisitedThisFloor = 0;
+                generateFloor();
+                
+                alert('You have already mastered all classes!\n\nContinuing to Floor 4...');
+                
+                updateMapScreen();
+                updateMapButtons();
+                showScreen('map-screen');
+            }
+        }
+
+        function selectFloor3Multiclass(classId) {
+            gameState.player.additionalClasses.push(classId);
+            gameState.hasChosenMidGameUpgrade = true;
+            
+            // Add 3 random starter cards from the new class to player's deck
+            const newClassDeck = startingDecks[classId];
+            const uniqueCards = [...new Set(newClassDeck)]; // Get unique cards
+            
+            // Shuffle and pick 3 random cards
+            const shuffled = uniqueCards.sort(() => Math.random() - 0.5);
+            const cardsToAdd = shuffled.slice(0, 3);
+            
+            // Add these cards as new instances to player's deck
+            cardsToAdd.forEach(cardId => {
+                const instanceId = `${cardId}_${gameState.player.nextInstanceId}`;
+                gameState.player.nextInstanceId++;
+                
+                gameState.player.cardInstances[instanceId] = {
+                    baseId: cardId,
+                    upgradeLevel: 0
+                };
+            });
+            
+            const info = classInfo[classId];
+            addToBattleLog(`Learned ${info.name} class! Added 3 ${info.name} cards to your deck.`);
+            
+            // Remove the offer screen
+            const offerScreen = document.getElementById('floor3-multiclass-offer');
+            if (offerScreen) {
+                offerScreen.remove();
+            }
+            
+            // Advance to floor 4
+            gameState.floor = 4;
+            gameState.roomsVisitedThisFloor = 0;
+            generateFloor();
+            
+            // Show message with card details
+            const cardNames = cardsToAdd.map(id => cardDatabase[id].name).join(', ');
+            alert(`🎉 You've learned ${info.name}!\n\n📜 Added to your deck:\n${cardNames}\n\nTheir cards will now appear in shops.\n\nFloor 3 Complete! Advancing to Floor 4...`);
+            
+            updateMapScreen();
+            updateMapButtons();
+            showScreen('map-screen');
+        }
+
+        console.log('Battle system loaded');
+
+        // ==================== SHOP SYSTEM ====================
+        function openShop() {
+            const shopContainer = document.getElementById('shop-cards');
+            shopContainer.innerHTML = '';
+            
+            // Generate 5-7 cards
+            const numCards = 5 + Math.floor(Math.random() * 3);
+            
+            for (let i = 0; i < numCards; i++) {
+                const cardId = generateShopCard();
+                const card = cardDatabase[cardId];
+                const price = calculateCardPrice(cardId);
+                
+                const cardEl = createShopCardElement(card, cardId, price);
+                shopContainer.appendChild(cardEl);
+            }
+            
+            updateGoldDisplay();
+            showScreen('shop-screen');
+        }
+
+        function generateShopCard() {
+            // Build list of available classes (player's class + additional classes)
+            const availableClasses = [gameState.player.class, ...gameState.player.additionalClasses];
+            
+            // 60% chance for cards from available classes, 40% chance for any card
+            const useAvailableClasses = Math.random() < 0.6;
+            
+            if (useAvailableClasses && availableClasses.length > 0) {
+                // Pick a random available class
+                const randomClass = availableClasses[Math.floor(Math.random() * availableClasses.length)];
+                const classCards = startingDecks[randomClass];
+                const uniqueCards = [...new Set(classCards)];
+                return uniqueCards[Math.floor(Math.random() * uniqueCards.length)];
+            } else {
+                // Get cards from any class or universal cards
+                const allCardIds = Object.keys(cardDatabase);
+                return allCardIds[Math.floor(Math.random() * allCardIds.length)];
+            }
+        }
+
+        function calculateCardPrice(cardId) {
+            const card = cardDatabase[cardId];
+            
+            // Base price by type
+            let basePrice = 50;
+            
+            if (card.type === 'Attack') {
+                const damageMatch = card.description.match(/(\d+)/);
+                if (damageMatch) {
+                    const damage = parseInt(damageMatch[1]);
+                    basePrice = 40 + (damage * 3);
+                }
+            } else if (card.type === 'Defense') {
+                const blockMatch = card.description.match(/(\d+)/);
+                if (blockMatch) {
+                    const block = parseInt(blockMatch[1]);
+                    basePrice = 35 + (block * 4);
+                }
+            } else if (card.type === 'Skill') {
+                basePrice = 50;
+            }
+            
+            // Add some randomness (-10 to +10)
+            basePrice += Math.floor(Math.random() * 21) - 10;
+            
+            return Math.max(30, basePrice);
+        }
+
+        function createShopCardElement(card, cardId, price) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            
+            const canAfford = gameState.gold >= price;
+            if (!canAfford) {
+                div.classList.add('disabled');
+            }
+            
+            div.innerHTML = `
+                <div class="card-cost">${card.cost}</div>
+                <div class="card-name">${card.name}</div>
+                <div class="card-description">${card.description}</div>
+                <div class="card-type">${card.type}</div>
+                <div style="text-align: center; margin-top: 10px; color: #f39c12; font-weight: bold;">
+                    💰 ${price} Gold
+                </div>
+            `;
+            
+            if (canAfford) {
+                div.onclick = () => buyCard(cardId, price, div);
+            }
+            
+            return div;
+        }
+
+        function buyCard(cardId, price, cardElement) {
+            if (gameState.gold < price) {
+                addToBattleLog('Not enough gold!');
+                return;
+            }
+            
+            gameState.gold -= price;
+            
+            // Add card to deck as new instance
+            const instanceId = `${cardId}_${gameState.player.nextInstanceId}`;
+            gameState.player.nextInstanceId++;
+            
+            gameState.player.cardInstances[instanceId] = {
+                baseId: cardId,
+                upgradeLevel: 0
+            };
+            
+            // Add to draw pile if in battle, otherwise just track it
+            if (gameState.player.deck) {
+                gameState.player.deck.push(instanceId);
+            }
+            
+            // Remove card from shop
+            cardElement.style.opacity = '0.3';
+            cardElement.onclick = null;
+            cardElement.innerHTML += '<div style="text-align: center; color: #27ae60; margin-top: 10px;">SOLD</div>';
+            
+            updateGoldDisplay();
+            addToBattleLog(`Purchased ${cardDatabase[cardId].name} for ${price} gold`);
+        }
+
+        console.log('Shop system loaded');
+
+        // ==================== REST SITE & UPGRADE SYSTEM ====================
+        function openRestSite() {
+            const healAmount = Math.floor(gameState.player.maxHp * 0.25);
+            document.getElementById('heal-amount').textContent = healAmount;
+            showScreen('rest-site-screen');
+        }
+
+        function chooseHeal() {
+            const healAmount = Math.floor(gameState.player.maxHp * 0.25);
+            gameState.player.hp = Math.min(gameState.player.hp + healAmount, gameState.player.maxHp);
+            
+            gameState.restSitesUsedThisFloor++;
+            gameState.roomsVisitedThisFloor++;
+            
+            addToBattleLog(`Healed ${healAmount} HP at rest site`);
+            
+            updateMapScreen();
+            updateMapButtons();
+            showScreen('map-screen');
+        }
+
+        function chooseUpgrade() {
+            showUpgradeSelection();
+        }
+
+        function showUpgradeSelection() {
+            const container = document.getElementById('upgrade-card-list');
+            container.innerHTML = '';
+            
+            // Get all unique card types in deck
+            const cardIds = Object.keys(gameState.player.cardInstances);
+            
+            cardIds.forEach(instanceId => {
+                const instance = gameState.player.cardInstances[instanceId];
+                const card = getCardWithUpgrade(instanceId);
+                
+                const cardEl = createUpgradeCardElement(card, instanceId);
+                container.appendChild(cardEl);
+            });
+            
+            showScreen('card-upgrade-screen');
+        }
+
+        function createUpgradeCardElement(card, instanceId) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            
+            div.innerHTML = `
+                <div class="card-cost">${card.cost}</div>
+                <div class="card-name">${card.name}</div>
+                <div class="card-description">${card.description}</div>
+                <div class="card-type">${card.type}</div>
+            `;
+            
+            div.onclick = () => showUpgradePreview(instanceId);
+            
+            return div;
+        }
+
+        function showUpgradePreview(instanceId) {
+            const container = document.getElementById('upgrade-preview-container');
+            container.innerHTML = '';
+            
+            const instance = gameState.player.cardInstances[instanceId];
+            const currentCard = getCardWithUpgrade(instanceId);
+            
+            // Create upgraded version
+            const upgradedInstance = {
+                baseId: instance.baseId,
+                upgradeLevel: instance.upgradeLevel + 1
+            };
+            
+            const tempId = 'temp_upgrade_preview';
+            gameState.player.cardInstances[tempId] = upgradedInstance;
+            const upgradedCard = getCardWithUpgrade(tempId);
+            delete gameState.player.cardInstances[tempId];
+            
+            container.innerHTML = `
+                <h2 style="text-align: center; margin-bottom: 30px;">⬆️ Upgrade Preview ⬆️</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 800px; margin: 0 auto;">
+                    <div>
+                        <h3 style="text-align: center; color: #95a5a6; margin-bottom: 15px;">Current</h3>
+                        <div class="card" style="margin: 0 auto;">
+                            <div class="card-cost">${currentCard.cost}</div>
+                            <div class="card-name">${currentCard.name}</div>
+                            <div class="card-description">${currentCard.description}</div>
+                            <div class="card-type">${currentCard.type}</div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 style="text-align: center; color: #27ae60; margin-bottom: 15px;">Upgraded</h3>
+                        <div class="card" style="margin: 0 auto; border-color: #27ae60;">
+                            <div class="card-cost">${upgradedCard.cost}</div>
+                            <div class="card-name">${upgradedCard.name}</div>
+                            <div class="card-description">${upgradedCard.description}</div>
+                            <div class="card-type">${upgradedCard.type}</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 40px; display: flex; gap: 20px; justify-content: center;">
+                    <button onclick="confirmUpgrade('${instanceId}')" class="btn-success">✓ Confirm Upgrade</button>
+                    <button onclick="showUpgradeSelection()" class="btn-danger">← Back</button>
+                </div>
+            `;
+            
+            showScreen('upgrade-preview-screen');
+        }
+
+        function confirmUpgrade(instanceId) {
+            gameState.player.cardInstances[instanceId].upgradeLevel++;
+            
+            gameState.restSitesUsedThisFloor++;
+            gameState.roomsVisitedThisFloor++;
+            
+            const card = getCardWithUpgrade(instanceId);
+            addToBattleLog(`Upgraded ${card.name}!`);
+            
+            updateMapScreen();
+            updateMapButtons();
+            showScreen('map-screen');
+        }
+
+        console.log('Rest site and upgrade system loaded');
+
+        // ==================== ANCIENT ROOM SYSTEM ====================
+        function openAncientRoom() {
+            showScreen('ancient-room-screen');
+        }
+
+        function showAncientCards() {
+            const container = document.getElementById('ancient-cards-list');
+            container.innerHTML = '';
+            
+            // Generate 3 powerful/rare cards
+            const ancientCardPool = ['inferno', 'savageStrike', 'criticalHit', 'crescendo', 'volatileMixture', 
+                                     'rootGrasp', 'multiShot', 'flyingKick', 'soulSiphon', 'powerStrike'];
+            
+            // Shuffle and pick 3
+            const shuffled = ancientCardPool.sort(() => Math.random() - 0.5);
+            const selectedCards = shuffled.slice(0, 3);
+            
+            selectedCards.forEach(cardId => {
+                const card = cardDatabase[cardId];
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card ancient-card-border';
+                
+                cardEl.innerHTML = `
+                    <div class="ancient-tag">ANCIENT</div>
+                    <div class="card-cost">${card.cost}</div>
+                    <div class="card-name">${card.name}</div>
+                    <div class="card-description">${card.description}</div>
+                    <div class="card-type">${card.type}</div>
+                `;
+                
+                cardEl.onclick = () => selectAncientCard(cardId);
+                container.appendChild(cardEl);
+            });
+            
+            showScreen('ancient-cards-screen');
+        }
+
+        function selectAncientCard(cardId) {
+            // Add card to deck as new instance
+            const instanceId = `${cardId}_${gameState.player.nextInstanceId}`;
+            gameState.player.nextInstanceId++;
+            
+            gameState.player.cardInstances[instanceId] = {
+                baseId: cardId,
+                upgradeLevel: 0
+            };
+            
+            addToBattleLog(`Obtained ancient card: ${cardDatabase[cardId].name}!`);
+            
+            increaseAncientRoomChance();
+            gameState.roomsVisitedThisFloor++;
+            
+            updateMapScreen();
+            updateMapButtons();
+            showScreen('map-screen');
+        }
+
+        function showMulticlassSelection() {
+            const grid = document.getElementById('multiclass-grid');
+            grid.innerHTML = '';
+            
+            let availableClasses = 0;
+            
+            Object.keys(classInfo).forEach(classId => {
+                // Skip current class and already learned classes
+                if (classId === gameState.player.class) return;
+                if (gameState.player.additionalClasses.includes(classId)) return;
+                
+                availableClasses++;
+                
+                const info = classInfo[classId];
+                const card = document.createElement('div');
+                card.className = 'class-card ancient-card-border';
+                
+                card.innerHTML = `
+                    <div class="ancient-tag">MULTICLASS</div>
+                    <h3>${info.name}</h3>
+                    <p><strong>HP:</strong> ${info.hp}</p>
+                    <p><strong>Cards:</strong> ${info.starting}</p>
+                    <p style="margin-top: 10px; color: #ffd700;"><strong>Adds this class's cards to shop pool!</strong></p>
+                `;
+                
+                card.onclick = () => selectMulticlass(classId);
+                grid.appendChild(card);
+            });
+            
+            // If no classes available, show message
+            if (availableClasses === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #ffd700; font-size: 20px;">You have mastered all classes! Nothing more to learn here.</p>';
+                
+                // Add a continue button
+                const continueBtn = document.createElement('button');
+                continueBtn.textContent = 'Continue';
+                continueBtn.style.marginTop = '20px';
+                continueBtn.onclick = () => {
+                    increaseAncientRoomChance();
+                    gameState.roomsVisitedThisFloor++;
+                    updateMapScreen();
+                    updateMapButtons();
+                    showScreen('map-screen');
+                };
+                grid.appendChild(continueBtn);
+            }
+            
+            showScreen('multiclass-screen');
+        }
+
+        function selectMulticlass(classId) {
+            gameState.player.additionalClasses.push(classId);
+            
+            // Add 3 random starter cards from the new class to player's deck
+            const newClassDeck = startingDecks[classId];
+            const uniqueCards = [...new Set(newClassDeck)]; // Get unique cards
+            
+            // Shuffle and pick 3 random cards
+            const shuffled = uniqueCards.sort(() => Math.random() - 0.5);
+            const cardsToAdd = shuffled.slice(0, 3);
+            
+            // Add these cards as new instances to player's deck
+            cardsToAdd.forEach(cardId => {
+                const instanceId = `${cardId}_${gameState.player.nextInstanceId}`;
+                gameState.player.nextInstanceId++;
+                
+                gameState.player.cardInstances[instanceId] = {
+                    baseId: cardId,
+                    upgradeLevel: 0
+                };
+            });
+            
+            const info = classInfo[classId];
+            const cardNames = cardsToAdd.map(id => cardDatabase[id].name).join(', ');
+            
+            addToBattleLog(`Learned ${info.name} class! Added 3 ${info.name} cards to your deck. Their cards now appear in shops.`);
+            
+            increaseAncientRoomChance();
+            gameState.roomsVisitedThisFloor++;
+            
+            // Show message with card details
+            alert(`🎉 You've learned ${info.name}!\n\n📜 Added to your deck:\n${cardNames}\n\nTheir cards will now appear in shops.`);
+            
+            updateMapScreen();
+            updateMapButtons();
+            showScreen('map-screen');
+        }
+
+        // ==================== BOSS SYSTEM ====================
+        const bossData = {
+            // Floor 1 Mini-Bosses
+            floor1: {
+                goblinKing: {
+                    name: 'Goblin King',
+                    baseHp: 180,
+                    baseAttack: 9  // Reduced from 11
+                },
+                orcWarlord: {
+                    name: 'Orc Warlord',
+                    baseHp: 200,
+                    baseAttack: 8  // Reduced from 10
+                },
+                darkKnight: {
+                    name: 'Dark Knight',
+                    baseHp: 190,
+                    baseAttack: 10  // Reduced from 12
+                }
+            },
+            
+            // Floor 2 Mini-Bosses
+            floor2: {
+                necromancerLord: {
+                    name: 'Necromancer Lord',
+                    baseHp: 220,
+                    baseAttack: 11  // Reduced from 13
+                },
+                dragonling: {
+                    name: 'Dragonling',
+                    baseHp: 240,
+                    baseAttack: 12  // Reduced from 14
+                },
+                demonGuard: {
+                    name: 'Demon Guard',
+                    baseHp: 230,
+                    baseAttack: 11  // Reduced from 13
+                }
+            },
+            
+            // Floor 3 Mini-Bosses
+            floor3: {
+                voidBeast: {
+                    name: 'Void Beast',
+                    baseHp: 260,
+                    baseAttack: 13  // Reduced from 15
+                },
+                lichLord: {
+                    name: 'Lich Lord',
+                    baseHp: 270,
+                    baseAttack: 14  // Reduced from 16
+                },
+                stormTitan: {
+                    name: 'Storm Titan',
+                    baseHp: 280,
+                    baseAttack: 13  // Reduced from 15
+                }
+            },
+            
+            // Floor 4 Mini-Bosses
+            floor4: {
+                abyssalHorror: {
+                    name: 'Abyssal Horror',
+                    baseHp: 300,
+                    baseAttack: 15  // Reduced from 17
+                },
+                archDemon: {
+                    name: 'Arch Demon',
+                    baseHp: 310,
+                    baseAttack: 16  // Reduced from 18
+                },
+                elderDragon: {
+                    name: 'Elder Dragon',
+                    baseHp: 320,
+                    baseAttack: 15  // Reduced from 17
+                }
+            },
+            
+            // Final Boss (Floor 5)
+            finalBoss: {
+                theOverseer: {
+                    name: 'The Overseer',
+                    baseHp: 350,
+                    baseAttack: 18  // Reduced from 20
+                },
+                theFallenOverseer: {
+                    name: 'The Fallen Overseer',
+                    baseHp: 400,
+                    baseAttack: 20  // Reduced from 22
+                },
+                theAncientOverseer: {
+                    name: 'The Ancient Overseer',
+                    baseHp: 450,
+                    baseAttack: 22  // Reduced from 24
+                },
+                theWatcher: {
+                    name: 'The Watcher',
+                    baseHp: 500,
+                    baseAttack: 24  // Reduced from 26
+                }
+            }
+        };
+
+        function startBossFight() {
+            let boss;
+            
+            // Select boss based on floor
+            if (gameState.floor === 1) {
+                // Random Floor 1 mini-boss
+                const floor1Bosses = Object.values(bossData.floor1);
+                boss = floor1Bosses[Math.floor(Math.random() * floor1Bosses.length)];
+            } else if (gameState.floor === 2) {
+                // Random Floor 2 mini-boss
+                const floor2Bosses = Object.values(bossData.floor2);
+                boss = floor2Bosses[Math.floor(Math.random() * floor2Bosses.length)];
+            } else if (gameState.floor === 3) {
+                // Random Floor 3 mini-boss
+                const floor3Bosses = Object.values(bossData.floor3);
+                boss = floor3Bosses[Math.floor(Math.random() * floor3Bosses.length)];
+            } else if (gameState.floor === 4) {
+                // Random Floor 4 mini-boss
+                const floor4Bosses = Object.values(bossData.floor4);
+                boss = floor4Bosses[Math.floor(Math.random() * floor4Bosses.length)];
+            } else if (gameState.floor === 5) {
+                // Final Boss - Based on difficulty
+                const difficulty = progression.selectedDifficulty;
+                
+                if (difficulty === 'EASY') {
+                    boss = bossData.finalBoss.theOverseer;
+                } else if (difficulty === 'HARD') {
+                    boss = bossData.finalBoss.theFallenOverseer;
+                } else if (difficulty === 'INSANE') {
+                    boss = bossData.finalBoss.theAncientOverseer;
+                } else if (difficulty === 'IMPOSSIBLE') {
+                    boss = bossData.finalBoss.theWatcher;
+                } else {
+                    boss = bossData.finalBoss.theOverseer; // Default to Overseer
+                }
+            } else {
+                // Fallback
+                boss = bossData.floor1.goblinKing;
+            }
+            
+            // Apply difficulty multiplier
+            const difficulty = progression.selectedDifficulty;
+            const hpMult = difficultySettings[difficulty].hpMult;
+            const atkMult = difficultySettings[difficulty].atkMult;
+            
+            const hp = Math.floor(boss.baseHp * hpMult);
+            const attack = Math.floor(boss.baseAttack * atkMult);
+            
+            startBattle(boss.name, hp, attack);
+        }
+
+        function startNormalBattle() {
+            const difficulty = progression.selectedDifficulty;
+            const hpMult = difficultySettings[difficulty].hpMult;
+            const atkMult = difficultySettings[difficulty].atkMult;
+            
+            const baseHp = 40 + Math.floor(Math.random() * 30) + (gameState.floor * 10);
+            const baseAttack = 5 + Math.floor(Math.random() * 3) + gameState.floor; // Reduced from 6 + (0-4) to 5 + (0-3)
+            
+            const hp = Math.floor(baseHp * hpMult);
+            const attack = Math.floor(baseAttack * atkMult);
+            
+            const enemyNames = ['Goblin', 'Orc', 'Skeleton', 'Dark Mage', 'Bandit', 'Wraith'];
+            const name = enemyNames[Math.floor(Math.random() * enemyNames.length)];
+            
+            startBattle(name, hp, attack);
+        }
+
+        // ==================== PROGRESSION & SAVE SYSTEM ====================
+        function saveProgression() {
+            localStorage.setItem('roguelikeProgression', JSON.stringify(progression));
+        }
+
+        function loadProgression() {
+            const saved = localStorage.getItem('roguelikeProgression');
+            if (saved) {
+                progression = JSON.parse(saved);
+                
+                // Update unlocked difficulties
+                if (progression.hasDefeatedOverseer) {
+                    difficultySettings.HARD.unlocked = true;
+                }
+                if (progression.hasDefeatedFallenOverseer) {
+                    difficultySettings.INSANE.unlocked = true;
+                }
+                if (progression.hasDefeatedAncientOverseer) {
+                    difficultySettings.IMPOSSIBLE.unlocked = true;
+                }
+            }
+        }
+
+        console.log('Boss system and progression loaded');
+
+        // ==================== CLASS SELECTION ====================
+        function initializeClassSelection() {
+            const grid = document.getElementById('class-grid');
+            grid.innerHTML = '';
+            
+            Object.keys(classInfo).forEach(classId => {
+                const info = classInfo[classId];
+                const card = document.createElement('div');
+                card.className = 'class-card';
+                
+                card.innerHTML = `
+                    <h3>${info.name}</h3>
+                    <p><strong>HP:</strong> ${info.hp}</p>
+                    <p><strong>Starting Cards:</strong> ${info.starting}</p>
+                    <p><strong>Playstyle:</strong> ${info.playstyle}</p>
+                `;
+                
+                card.onclick = () => selectClass(classId);
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function selectClass(classId) {
+            const info = classInfo[classId];
+            
+            gameState.player.class = classId;
+            gameState.player.name = info.name;
+            gameState.player.maxHp = info.hp;
+            gameState.player.hp = info.hp;
+            gameState.player.deck = [];
+            gameState.player.cardInstances = {};
+            gameState.player.nextInstanceId = 0;
+            
+            // Create card instances from starting deck
+            const startingDeck = startingDecks[classId];
+            startingDeck.forEach(cardId => {
+                const instanceId = `${cardId}_${gameState.player.nextInstanceId}`;
+                gameState.player.nextInstanceId++;
+                
+                gameState.player.cardInstances[instanceId] = {
+                    baseId: cardId,
+                    upgradeLevel: 0
+                };
+            });
+            
+            // Reset game state
+            gameState.gold = 50;
+            gameState.floor = 1;
+            gameState.roomsVisitedThisFloor = 0;
+            gameState.restSitesUsedThisFloor = 0;
+            
+            // Generate the floor
+            generateFloor();
+            
+            updateMapScreen();
+            updateMapButtons();
+            showScreen('map-screen');
+        }
+
+        // ==================== DIFFICULTY SELECTION ====================
+        function initializeDifficultyButtons() {
+            const container = document.getElementById('difficulty-buttons');
+            container.innerHTML = '';
+            
+            const bossNames = {
+                'EASY': '👁️ Overseer',
+                'HARD': '☠️ Fallen Overseer',
+                'INSANE': '🔮 Ancient Overseer',
+                'IMPOSSIBLE': '👀 Watcher'
+            };
+            
+            Object.keys(difficultySettings).forEach(diffId => {
+                const settings = difficultySettings[diffId];
+                const button = document.createElement('button');
+                
+                button.textContent = diffId;
+                button.style.width = '100%';
+                button.style.fontSize = '14px';
+                button.style.padding = '10px';
+                
+                // Add boss name on second line
+                const bossLabel = document.createElement('div');
+                bossLabel.style.fontSize = '11px';
+                bossLabel.style.marginTop = '3px';
+                bossLabel.style.opacity = '0.8';
+                bossLabel.textContent = `Final Boss: ${bossNames[diffId]}`;
+                
+                if (!settings.unlocked) {
+                    button.disabled = true;
+                    button.style.opacity = '0.5';
+                    button.textContent += ' 🔒';
+                } else {
+                    button.appendChild(document.createElement('br'));
+                    button.appendChild(bossLabel);
+                }
+                
+                if (progression.selectedDifficulty === diffId) {
+                    button.style.borderColor = '#f39c12';
+                    button.style.borderWidth = '3px';
+                }
+                
+                button.onclick = () => selectDifficulty(diffId);
+                
+                container.appendChild(button);
+            });
+        }
+
+        function selectDifficulty(diffId) {
+            if (!difficultySettings[diffId].unlocked) return;
+            
+            progression.selectedDifficulty = diffId;
+            saveProgression();
+            initializeDifficultyButtons();
+        }
+
+        console.log('Class selection and difficulty system loaded');
+
+        // ==================== FLOOR GENERATION ====================
+        function generateFloor() {
+            gameState.roomTypes = [];
+            gameState.roomsVisitedThisFloor = 0;
+            
+            // First room is ALWAYS battle
+            gameState.roomTypes.push('battle');
+            
+            // Generate remaining 9 rooms (rooms 2-10)
+            // Room 10 is always boss, so we have rooms 2-9 to fill (8 rooms)
+            
+            // Determine number of shops (1-4)
+            const numShops = 1 + Math.floor(Math.random() * 4); // 1, 2, 3, or 4
+            
+            // Determine number of rest sites (1-2)
+            const numRestSites = Math.random() < 0.5 ? 1 : 2;
+            gameState.maxRestSitesPerFloor = numRestSites;
+            gameState.restSitesUsedThisFloor = 0;
+            
+            // Create array of room types for rooms 2-9
+            let roomPool = [];
+            
+            // Add shops
+            for (let i = 0; i < numShops; i++) {
+                roomPool.push('shop');
+            }
+            
+            // Add rest sites
+            for (let i = 0; i < numRestSites; i++) {
+                roomPool.push('rest');
+            }
+            
+            // Fill remaining with battles
+            while (roomPool.length < 8) {
+                roomPool.push('battle');
+            }
+            
+            // Shuffle the room pool
+            for (let i = roomPool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [roomPool[i], roomPool[j]] = [roomPool[j], roomPool[i]];
+            }
+            
+            // Add shuffled rooms to roomTypes (rooms 2-9)
+            gameState.roomTypes.push(...roomPool);
+            
+            // Room 10 is always boss
+            gameState.roomTypes.push('boss');
+            
+            console.log('Floor generated:', gameState.roomTypes);
+            console.log('Ancient room chance:', gameState.ancientRoomChance);
+        }
+
+        function getCurrentRoomType() {
+            if (gameState.roomsVisitedThisFloor >= 10) {
+                return 'boss';
+            }
+            
+            // Check for ancient room chance (only on non-first rooms)
+            if (gameState.roomsVisitedThisFloor > 0) {
+                const roll = Math.random();
+                if (roll < gameState.ancientRoomChance) {
+                    return 'ancient';
+                }
+            }
+            
+            return gameState.roomTypes[gameState.roomsVisitedThisFloor] || 'battle';
+        }
+
+        function increaseAncientRoomChance() {
+            gameState.ancientRoomsFound++;
+            gameState.ancientRoomChance = Math.min(0.10, gameState.ancientRoomChance + 0.01); // Cap at 10%
+            console.log('Ancient room found! New chance:', gameState.ancientRoomChance);
+        }
+
+        function updateMapButtons() {
+            const battleBtn = document.getElementById('battle-btn');
+            const shopBtn = document.getElementById('shop-btn');
+            const restBtn = document.getElementById('rest-btn');
+            const ancientBtn = document.getElementById('ancient-btn');
+            
+            // Hide all buttons first
+            battleBtn.style.display = 'none';
+            shopBtn.style.display = 'none';
+            restBtn.style.display = 'none';
+            ancientBtn.style.display = 'none';
+            
+            const currentRoom = getCurrentRoomType();
+            
+            if (currentRoom === 'battle' || currentRoom === 'boss') {
+                battleBtn.style.display = 'inline-block';
+                battleBtn.disabled = false;
+                battleBtn.style.opacity = '1';
+                if (currentRoom === 'boss') {
+                    battleBtn.textContent = '⚔️ BOSS BATTLE ⚔️';
+                    battleBtn.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+                } else {
+                    battleBtn.textContent = '⚔️ Battle';
+                    battleBtn.style.background = 'linear-gradient(135deg, #27ae60 0%, #229954 100%)';
+                }
+            } else if (currentRoom === 'shop') {
+                shopBtn.style.display = 'inline-block';
+                shopBtn.disabled = false;
+                shopBtn.style.opacity = '1';
+            } else if (currentRoom === 'rest') {
+                restBtn.style.display = 'inline-block';
+                restBtn.disabled = false;
+                restBtn.style.opacity = '1';
+            } else if (currentRoom === 'ancient') {
+                ancientBtn.style.display = 'inline-block';
+                ancientBtn.disabled = false;
+                ancientBtn.style.opacity = '1';
+            }
+        }
+
+        // ==================== EVENT HANDLERS ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Game initializing...');
+            
+            // Load progression
+            loadProgression();
+            
+            // Initialize UI
+            initializeDifficultyButtons();
+            initializeClassSelection();
+            
+            // Hub Screen
+            document.getElementById('enter-dungeon-btn').onclick = () => {
+                showScreen('class-selection');
+            };
+            
+            document.getElementById('lorekeeper-card').onclick = () => {
+                alert('🔮 The Lorekeeper speaks:\n\n"Many have entered these halls, brave one. The dungeon is vast and ever-changing...\n\nEach floor has its own guardians - mighty warriors, dark sorcerers, and terrible beasts.\n\nBut beware the fifth floor... there the Four Ancients dwell:\n\n👁️ The Overseer awaits those who seek an EASY trial.\n☠️ The Fallen Overseer challenges the HARD of heart.\n🔮 The Ancient Overseer tests the INSANE.\n👀 The Watcher judges only the IMPOSSIBLE.\n\nYour chosen path determines which Ancient you will face."\n\n"Choose your difficulty wisely, hero."');
+            };
+            
+            // Map Screen Buttons
+            document.getElementById('battle-btn').onclick = () => {
+                const roomType = getCurrentRoomType();
+                if (roomType === 'boss') {
+                    startBossFight();
+                } else {
+                    startNormalBattle();
+                }
+            };
+            
+            document.getElementById('shop-btn').onclick = () => {
+                openShop();
+            };
+            
+            document.getElementById('rest-btn').onclick = () => {
+                openRestSite();
+            };
+            
+            document.getElementById('ancient-btn').onclick = () => {
+                openAncientRoom();
+            };
+            
+            // Ancient Room Options
+            document.getElementById('ancient-cards-option').onclick = () => {
+                showAncientCards();
+            };
+            
+            document.getElementById('multiclass-option').onclick = () => {
+                showMulticlassSelection();
+            };
+            
+            // Battle Screen
+            document.getElementById('end-turn-btn').onclick = () => {
+                endTurn();
+            };
+            
+            // Shop Screen
+            document.getElementById('leave-shop-btn').onclick = () => {
+                gameState.roomsVisitedThisFloor++;
+                updateMapScreen();
+                updateMapButtons();
+                showScreen('map-screen');
+            };
+            
+            // Rest Site Screen
+            document.getElementById('heal-option').onclick = () => {
+                chooseHeal();
+            };
+            
+            document.getElementById('upgrade-option').onclick = () => {
+                chooseUpgrade();
+            };
+            
+            // Card Upgrade Screen
+            document.getElementById('cancel-upgrade-btn').onclick = () => {
+                updateMapScreen();
+                updateMapButtons();
+                showScreen('map-screen');
+            };
+            
+            // Victory Screen
+            document.getElementById('return-to-hub-btn').onclick = () => {
+                showScreen('hub-screen');
+            };
+            
+            // Defeat Screen
+            document.getElementById('restart-btn').onclick = () => {
+                showScreen('hub-screen');
+            };
+            
+            console.log('✅ Game fully loaded and ready!');
+        });
+
+        // Make confirmUpgrade available globally for onclick
+        window.confirmUpgrade = confirmUpgrade;
+
+        console.log('Event handlers loaded - GAME COMPLETE!');
+    </script>
+</body>
+</html>
